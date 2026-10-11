@@ -7,6 +7,8 @@ import { useUiStore } from '../store/ui';
 import type { Screen } from '../store/ui';
 import styles from './Sidebar.module.css';
 
+export const SIDEBAR_FOCUS_KEY = 'SIDEBAR';
+
 interface SidebarItemConfig {
   screen: Screen;
   label: string;
@@ -67,6 +69,7 @@ export const Sidebar = memo(function Sidebar(): ReactElement {
   );
 
   const { ref, focusKey } = useFocusable({
+    focusKey: SIDEBAR_FOCUS_KEY,
     trackChildren: true,
     saveLastFocusedChild: true,
     isFocusBoundary: true,

@@ -7,7 +7,7 @@ import {
 } from '@noriginmedia/norigin-spatial-navigation';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { TransitionWrapper } from './components/TransitionWrapper';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, SIDEBAR_FOCUS_KEY } from './components/Sidebar';
 import { Spinner } from './components/LoadingSkeleton';
 import { PlayerProvider } from './contexts/PlayerContext';
 import { refreshAccessToken, AuthRequiredError, setOnAuthFailure } from './api/client';
@@ -116,6 +116,14 @@ export function App(): ReactElement {
       useUiStore.getState().navigate('home');
     }
   }, [isAuthenticated, currentScreen]);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      requestAnimationFrame(() => {
+        setFocus(SIDEBAR_FOCUS_KEY);
+      });
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     setOnAuthFailure(() => {

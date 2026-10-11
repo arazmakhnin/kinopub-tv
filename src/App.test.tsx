@@ -1,8 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
+import { init } from '@noriginmedia/norigin-spatial-navigation';
 import { App } from './App';
 import { useAuthStore } from './store/auth';
 import { useUiStore } from './store/ui';
+import sidebarStyles from './components/Sidebar.module.css';
 
 vi.mock('./api/auth', () => {
   class AuthRequestError extends Error {
@@ -42,6 +44,7 @@ vi.mock('./api/watching', () => ({
 
 describe('App', () => {
   beforeEach(() => {
+    init({ debug: false, visualDebug: false });
     useAuthStore.setState({
       isAuthenticated: false,
     });
@@ -71,6 +74,22 @@ describe('App', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Home')).toBeDefined();
+    });
+  });
+
+  it('focuses the sidebar on login even when the home page has no content', async () => {
+    useAuthStore.setState({ isAuthenticated: true });
+    useUiStore.setState({ currentScreen: 'home' });
+
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('No shows in progress')).toBeDefined();
+    });
+
+    await waitFor(() => {
+      const homeItem = screen.getByText('Home').parentElement;
+      expect(homeItem?.className).toBe(sidebarStyles.itemFocused);
     });
   });
 });
