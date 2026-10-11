@@ -236,26 +236,6 @@ The `<video>` element and hls.js instance live in a React Context at the App lev
 - No consent dialog needed on the TV screen — `sdb connect <TV_IP>` works directly after TV restart
 - Developer Mode and Host PC IP persist across reboots
 
-### Network Setup — Two Deployment Options
-
-**Option A: TV on Ethernet (preferred, reliable)**
-- TV connected to Gl.inet LAN port via ethernet cable
-- TV IP: 192.168.8.195 (ethernet DHCP)
-- `sdb push` transfers in ~1.5s vs minutes over WiFi
-- Use `scripts/deploy-tv.sh` — switches WiFi to FilmLovers, deploys, switches back
-
-**Option B: TV on WiFi only**
-- TV IP: 192.168.8.146 (WiFi DHCP, may change on reboot)
-- File transfer via `tizen install` is unreliable over WiFi — frequent failures
-- socat TCP relay on Gl.inet forwards WAN:26101 → TV:26101 (for SunChasers access)
-
-**Common:**
-- Mac is on Movistar WiFi "SunChasers" (192.168.1.x)
-- Host PC IP on TV: 192.168.8.238 (Mac's permanent IP on FilmLovers)
-- Gl.inet GL-MT300N-V2 WAN IP: assigned by Movistar DHCP (check admin panel)
-- Gl.inet admin password: see memory
-- SSH to Gl.inet from WAN: `ssh root@<gl.inet-wan-ip>` (port 22 open on WAN)
-
 ### On-Device Debugging
 - Launch in debug mode: `sdb shell 0 debug <appId>` — returns a debug port
 - Connect Chrome DevTools Protocol via WebSocket at `ws://<TV_IP>:<port>/devtools/page/<id>`
@@ -355,31 +335,34 @@ Focus-driven, not scroll-driven:
 
 ## Deploy to Samsung TV
 
+### Dev Machine & Network
+- Run the development machine and TV on the same LAN — no WiFi switching or relay is required
+- The TV IP is DHCP-assigned and can change; check the TV's network settings if `sdb connect` fails
+- `sdb connect <TV_IP>:26101` reaches the TV directly
+
 ### Prerequisites
 - Tizen Studio installed at `~/tizen-studio`
-- Samsung certificate profile `tv-profile` configured with TV's DUID
-- TV in Developer Mode with Mac's IP whitelisted
+- A Samsung certificate profile configured with the TV's DUID
+- TV in Developer Mode (Settings > About > Developer options), Host PC IP no longer required to be whitelisted on Tizen 9.0
 
 ### First Connection After TV Restart (Tizen 9.0)
-- `sdb connect <TV_IP>` works directly — no Device Manager GUI or consent dialog needed
+- `sdb connect <TV_IP>:26101` works directly — no Device Manager GUI or consent dialog needed
+- Developer Mode and any Host PC IP setting persist across TV reboots
 
-### Deploy Commands (automated)
+### Deploy Commands
 ```bash
-npm run build
-cp tizen/config.xml dist/config.xml && cp tizen/icon.png dist/icon.png
-export PATH="$HOME/tizen-studio/tools:$HOME/tizen-studio/tools/ide/bin:$PATH"
-tizen package -t wgt -s tv-profile -- dist
-bash scripts/deploy-tv.sh  # switches WiFi, deploys, switches back
+TV_IP=<TV_IP> CERT_PROFILE=<CERT_PROFILE> bash scripts/deploy-tv.sh --build
 ```
 
-The deploy script (`scripts/deploy-tv.sh`) handles WiFi switching to FilmLovers, sdb connect, file push, install, app launch, and WiFi restore. Always run with `run_in_background: true` from Claude Code to avoid API disconnection during WiFi switch. TV IP is configured in the script (default: 192.168.8.195 for ethernet).
-```
+`scripts/deploy-tv.sh` connects over the LAN and builds, signs, pushes, installs, and launches the app. Pass the TV address using `TV_IP` or as the first argument; set `CERT_PROFILE` when using `--build`.
+
+For a personal machine, create an ignored `scripts/deploy-tv.local` wrapper that exports those two values and runs `deploy-tv.sh --build`. The `*.local` rule prevents that file from being committed.
 
 ### On-Device E2E Testing via CDP
 After launching in debug mode, the app exposes a Chrome DevTools Protocol port:
 ```bash
 # Get debug target
-curl http://192.168.8.146:<PORT>/json
+curl http://<TV_IP>:<PORT>/json
 
 # Connect via WebSocket and automate:
 # - Evaluate JS: Runtime.evaluate

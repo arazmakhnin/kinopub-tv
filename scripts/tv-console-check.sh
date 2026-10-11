@@ -9,7 +9,7 @@ if [ $# -lt 1 ]; then
   echo ""
   echo "Prerequisites:"
   echo "  - Tizen Studio installed with sdb in PATH"
-  echo "  - TV in Developer Mode with your PC's IP whitelisted"
+  echo "  - TV in Developer Mode, reachable on the same LAN"
   echo "  - KinoPub app installed and running on the TV"
   exit 1
 fi
