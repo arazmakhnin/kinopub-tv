@@ -1,9 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, cleanup } from '@testing-library/react';
 import { init } from '@noriginmedia/norigin-spatial-navigation';
 import { SearchPage } from './SearchPage';
 import { useUiStore } from '../store/ui';
 import { useAuthStore } from '../store/auth';
+import { useSearchStore } from '../store/search';
 import type { Item, PaginatedResponse } from '../types';
 
 function makeItem(id: number, title: string): Item {
@@ -86,6 +87,12 @@ describe('SearchPage', () => {
       currentScreen: 'search',
       screenParams: {},
       navigationStack: [{ screen: 'home', params: {}, lastFocusKey: null }],
+    });
+    useSearchStore.setState({
+      query: '',
+      results: [],
+      hasSearched: false,
+      focusedCardIndex: 0,
     });
   });
 
@@ -247,5 +254,31 @@ describe('SearchPage', () => {
       expect(screen.getByText('Correct Result')).toBeDefined();
       expect(screen.queryByText('Stale Result')).toBeNull();
     });
+  });
+
+  it('keeps query and results after unmounting and remounting (e.g. back from content page)', async () => {
+    const content = await import('../api/content');
+    vi.mocked(content.searchItems).mockResolvedValue(
+      makePaginatedResponse([makeItem(1, 'Test Movie')]),
+    );
+
+    const { unmount } = render(<SearchPage />);
+
+    const input = screen.getByPlaceholderText('Search...');
+    fireEvent.change(input, { target: { value: 'test' } });
+    vi.advanceTimersByTime(500);
+
+    await waitFor(() => {
+      expect(screen.getByText('Test Movie')).toBeDefined();
+    });
+
+    unmount();
+    cleanup();
+
+    render(<SearchPage />);
+
+    expect(screen.getByDisplayValue('test')).toBeDefined();
+    expect(screen.getByText('Test Movie')).toBeDefined();
+    expect(screen.queryByText('Type to search movies, series, and more')).toBeNull();
   });
 });

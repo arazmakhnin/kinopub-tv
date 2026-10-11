@@ -19,6 +19,7 @@ import { PosterSkeleton } from '../components/LoadingSkeleton';
 import { NetworkError } from '../components/NetworkError';
 import { searchItems } from '../api/content';
 import { useUiStore } from '../store/ui';
+import { useSearchStore } from '../store/search';
 import type { Item } from '../types';
 import styles from './SearchPage.module.css';
 
@@ -134,16 +135,21 @@ const ResultCard = memo(function ResultCard({
 });
 
 export const SearchPage = memo(function SearchPage(): ReactElement {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<ReadonlyArray<Item>>([]);
+  const query = useSearchStore((s) => s.query);
+  const setQuery = useSearchStore((s) => s.setQuery);
+  const results = useSearchStore((s) => s.results);
+  const setResults = useSearchStore((s) => s.setResults);
+  const hasSearched = useSearchStore((s) => s.hasSearched);
+  const setHasSearched = useSearchStore((s) => s.setHasSearched);
+  const focusedCardIndex = useSearchStore((s) => s.focusedCardIndex);
+  const setFocusedCardIndex = useSearchStore((s) => s.setFocusedCardIndex);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
-  const [hasSearched, setHasSearched] = useState(false);
-  const [focusedCardIndex, setFocusedCardIndex] = useState(0);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const rafRef = useRef<number | null>(null);
   const searchSeqRef = useRef(0);
   const queryRef = useRef(query);
+  const hadResultsOnMountRef = useRef(results.length > 0);
 
   const navigate = useUiStore((s) => s.navigate);
   const goBack = useUiStore((s) => s.goBack);
@@ -155,6 +161,9 @@ export const SearchPage = memo(function SearchPage(): ReactElement {
   });
 
   useEffect(() => {
+    if (hadResultsOnMountRef.current) {
+      return;
+    }
     rafRef.current = requestAnimationFrame(() => {
       setFocus(SEARCH_INPUT_FOCUS_KEY);
     });
@@ -193,7 +202,7 @@ export const SearchPage = memo(function SearchPage(): ReactElement {
         setLoading(false);
       }
     }
-  }, []);
+  }, [setResults, setHasSearched, setFocusedCardIndex]);
 
   const handleQueryChange = useCallback(
     (value: string): void => {
@@ -208,7 +217,7 @@ export const SearchPage = memo(function SearchPage(): ReactElement {
         executeSearch(value);
       }, DEBOUNCE_MS);
     },
-    [executeSearch],
+    [executeSearch, setQuery],
   );
 
   useEffect(() => {
@@ -228,7 +237,7 @@ export const SearchPage = memo(function SearchPage(): ReactElement {
 
   const handleCardFocus = useCallback((_item: PosterItem, index: number): void => {
     setFocusedCardIndex(index);
-  }, []);
+  }, [setFocusedCardIndex]);
 
   const resultsRef = useRef(results);
   resultsRef.current = results;
